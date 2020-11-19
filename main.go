@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -27,16 +29,18 @@ func main() {
 	// Get environment variables
 	prUrl, err := getEnvOrErr("INPUT_PR_URL")
 	exitWhenError(err)
+	prFilesUrl, err := pullRequestFilesURL(prUrl)
+	exitWhenError(err)
 
 	versionDir, err := getEnvOrErr("INPUT_DIR")
 	exitWhenError(err)
-	versionDirCleaned := filepath.Clean(versionDir)
+	versionDirCleaned := filepath.Clean(versionDir) + "/"
 
 	githubToken, err := getEnvOrErr("GITHUB_TOKEN")
 	exitWhenError(err)
 
 	// list PR files from GitHub API
-	prfs, err := listPullRequestsFiles(prUrl, githubToken)
+	prfs, err := listPullRequestsFiles(prFilesUrl, githubToken)
 	exitWhenError(err)
 
 	// get version from PR files
@@ -62,6 +66,15 @@ func getEnvOrErr(str string) (string, error) {
 	return val, nil
 }
 
+func pullRequestFilesURL(prUrl string) (string, error) {
+	u, err := url.Parse(prUrl)
+	if err != nil {
+		return "", err
+	}
+	u.Path = path.Join(u.Path, "files")
+	return u.String(), nil
+}
+
 func listPullRequestsFiles(url, token string) (PullRequestsFiles, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -75,6 +88,9 @@ func listPullRequestsFiles(url, token string) (PullRequestsFiles, error) {
 	if err != nil {
 		return nil, err
 	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("http response code is not 200")
+	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -82,8 +98,7 @@ func listPullRequestsFiles(url, token string) (PullRequestsFiles, error) {
 	}
 
 	var prfs PullRequestsFiles
-	err = json.Unmarshal(body, &prfs)
-	if err != nil {
+	if err = json.Unmarshal(body, &prfs); err != nil {
 		return nil, err
 	}
 
@@ -94,10 +109,11 @@ func getVersion(prfs PullRequestsFiles, versionDir string) (string, error) {
 	var version string
 	for _, prf := range prfs {
 		if strings.HasPrefix(prf.Filename, versionDir) {
+			trimed := strings.TrimPrefix(prf.Filename, versionDir)
 			if version == "" {
-				version = strings.Split(prf.Filename, "/")[0]
+				version = strings.Split(trimed, "/")[0]
 			} else {
-				if version != strings.Split(prf.Filename, "/")[0] {
+				if version != strings.Split(trimed, "/")[0] {
 					return "", fmt.Errorf("error: updated multiple version")
 				}
 			}
