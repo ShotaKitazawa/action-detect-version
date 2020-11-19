@@ -1,0 +1,21 @@
+name: Action Detect Version
+description: get version information from under the specified directory
+author: ShotaKitazawa
+inputs:
+  dir:
+    description: specified directory path enumerated folder that it was named of version information
+    required: true
+  repos_url:
+    required: true
+  pr_url:
+    required: true
+outputs:
+  new_version:
+    description: A semver update level ({major, minor, patch}).
+runs:
+  using: docker
+  image: Dockerfile
+branding:
+  icon: paperclip
+  color: blue
+
