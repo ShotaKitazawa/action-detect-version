@@ -1,7 +1,7 @@
-FROM alpine/git:latest
+FROM golang:1.15.5-alpine
 
-RUN apk add --no-cache bash curl jq
+#COPY go.mod go.sum ./
+#RUN go mod download
+COPY main.go ./
 
-COPY entrypoint.sh /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["go", "run", "main.go"]
