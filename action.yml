@@ -2,12 +2,11 @@ name: Action Detect Version
 description: get version information from under the specified directory
 author: ShotaKitazawa
 inputs:
+  pr_url:
+    description: value of github.event.pull_request.url
+    required: true
   dir:
     description: specified directory path enumerated folder that it was named of version information
-    required: true
-  repos_url:
-    required: true
-  pr_url:
     required: true
 outputs:
   new_version:
